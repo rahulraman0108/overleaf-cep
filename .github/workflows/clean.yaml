@@ -1,0 +1,57 @@
+name: Clean untagged/unneeded/old images
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 0 * * 0"
+    # run every week
+
+jobs:
+  clean-base-image:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete unnecessary base images
+        uses: snok/container-retention-policy@v3.0.0
+        with:
+          account: user
+          token: ${{ secrets.PA_TOKEN }}
+          image-names: "${{ github.event.repository.name }}-base"
+          image-tags: "!latest !${{ github.event.repository.default_branch || 'ext-ce'  }}"
+          tag-selection: both
+          cut-off: 1w
+          keep-n-most-recent: 5
+          dry-run: false
+
+  clean-main-image:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete unnecessary main images
+        uses: snok/container-retention-policy@v3.0.0
+        with:
+          account: user
+          token: ${{ secrets.PA_TOKEN }}
+          image-names: "${{ github.event.repository.name }}"
+          # clean all <branch>-sha<sha> tags, and all untagged images, but keep latest and <branch> tags
+          image-tags: "untagged !latest !${{ github.event.repository.default_branch || 'ext-ce' }} *-sha*"
+          tag-selection: both
+          cut-off: 1w
+          keep-n-most-recent: 5
+          dry-run: false
+
+  clean-all-very-old-images:
+    runs-on: ubuntu-latest
+    needs:
+      - clean-base-image
+      - clean-main-image
+    steps:
+      - name: Delete all very old unneeded images
+        uses: snok/container-retention-policy@v3.0.0
+        with:
+          account: user
+          token: ${{ secrets.PA_TOKEN }}
+          image-names: "${{ github.event.repository.name }}-base ${{ github.event.repository.name }}"
+          image-tags: "untagged !latest !${{ github.event.repository.default_branch || 'ext-ce' }} *"
+          tag-selection: both
+          cut-off: 3m
+          keep-n-most-recent: 0
+          dry-run: true

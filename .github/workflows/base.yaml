@@ -1,0 +1,135 @@
+name: Build base image for overleaf-cep
+
+on:
+  # push:
+  #   branches:
+  #     - ext-ce
+  workflow_dispatch:
+
+jobs:
+  build-base-image:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-latest
+            platform_pair: linux_amd64
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
+            platform_pair: linux_arm64
+    runs-on: ${{ matrix.runner }}
+    name: Build base image for ${{ matrix.platform }}
+    continue-on-error: true
+
+    steps:
+      - name: "Checkout GitHub Action"
+        uses: actions/checkout@main
+        with:
+          submodules: true
+          token: ${{ secrets.PA_TOKEN }}
+
+      - name: Update for Latest
+        run: |
+          git submodule update --remote --recursive
+          tree .
+
+      - name: Docker login to GitHub Container Registry
+        uses: docker/login-action@v3.0.0
+        with:
+          registry: ghcr.io
+          username: ${{github.actor}}
+          password: ${{secrets.GITHUB_TOKEN}}
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}-base
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Copy .dockerignore
+        run: cp server-ce/.dockerignore ./.dockerignore
+
+      - name: Build and push Docker image by digest
+        id: docker_build
+        uses: docker/build-push-action@v6
+        with:
+          platforms: ${{ matrix.platform }}
+          cache-from: type=gha,scope=${{ github.workflow }}-${{ matrix.platform_pair }}
+          cache-to: type=gha,scope=${{ github.workflow }}-${{ matrix.platform_pair }},mode=max
+          context: .
+          file: server-ce/Dockerfile-base
+          pull: true
+          labels: ${{ steps.meta.outputs.labels }}
+          tags: ghcr.io/${{ github.repository }}-base
+          network: host
+          outputs: type=image,push-by-digest=true,name-canonical=true,push=true
+
+      - name: Export digest
+        run: |
+          mkdir -p ${{ runner.temp }}/digests
+          digest="${{ steps.docker_build.outputs.digest }}"
+          touch "${{ runner.temp }}/digests/${digest#sha256:}"
+
+      - name: Upload digest
+        uses: actions/upload-artifact@v4
+        with:
+          name: digests-${{ matrix.platform_pair }}
+          path: ${{ runner.temp }}/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  merge-base-image:
+    runs-on: ubuntu-latest
+    name: Merge and push base image
+    needs:
+      - build-base-image
+    if: always()
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Pull and retag base image
+        shell: bash
+        run: |
+          export BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
+          export COMMIT_SHA=$(git rev-parse HEAD)
+
+          # Write the variable to the GITHUB_ENV file
+          echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
+          echo "COMMIT_SHA=$COMMIT_SHA" >> $GITHUB_ENV
+
+      - name: Download digests
+        uses: actions/download-artifact@v4
+        with:
+          path: ${{ runner.temp }}/digests
+          pattern: digests-*
+          merge-multiple: true
+
+      - name: Docker login to GitHub Container Registry
+        uses: docker/login-action@v3.0.0
+        with:
+          registry: ghcr.io
+          username: ${{github.actor}}
+          password: ${{secrets.GITHUB_TOKEN}}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Create manifest list and push
+        working-directory: ${{ runner.temp }}/digests
+        run: |
+          docker buildx imagetools create \
+            -t ghcr.io/${{ github.repository }}-base:latest \
+            -t ghcr.io/${{ github.repository }}-base:$BRANCH_NAME \
+            -t ghcr.io/${{ github.repository }}-base:$BRANCH_NAME-sha$COMMIT_SHA \
+            $(printf 'ghcr.io/${{ github.repository }}-base@sha256:%s ' *)
+
+      - name: Inspect image
+        run: |
+          docker buildx imagetools inspect \
+            ghcr.io/${{ github.repository }}-base:latest
