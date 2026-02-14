@@ -37,6 +37,12 @@ The present "extended" version of Overleaf CE includes:
 - Advanced administrator tools for managing user accounts and projects
 - Git integration
 
+### Fork Changes
+
+The following changes have been made to the contents of this repository with respect to the upstream:
+
+- Added GitHub actions workflows to automate publishing of docker images to GitHub Container Registry
+
 > [!CAUTION]
 > Overleaf Community Edition is intended for use in environments where **all** users are trusted. Community Edition is **not** appropriate for scenarios where isolation of users is required due to Sandbox Compiles not being available. When not using Sandboxed Compiles, users have full read and write access to the `sharelatex` container resources (filesystem, network, environment variables) when running LaTeX compiles. 
 Therefore, in any environment where not all users can be fully trusted, it is strongly recommended to enable the Sandboxed Compiles feature available in the Extended Community Edition.
