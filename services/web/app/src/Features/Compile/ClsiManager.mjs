@@ -41,7 +41,7 @@ const OUTPUT_FILE_TIMEOUT_MS = 60000
 const CLSI_COOKIES_ENABLED = (Settings.clsiCookie?.key ?? '') !== ''
 
 // The timeout in services/clsi/app.js is 10 minutes, so we'll be on the safe side with 12 minutes
-const COMPILE_REQUEST_TIMEOUT_MS = 12 * 60 * 1000
+const COMPILE_REQUEST_TIMEOUT_MS = 22 * 60 * 1000
 
 // Enable clsi-cache for all compiles for 20min when detecting low capacity.
 const ENABLE_COMPILE_FROM_CACHE_ON_503_MS = 20 * 60 * 1000
