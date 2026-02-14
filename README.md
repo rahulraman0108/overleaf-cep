@@ -42,9 +42,11 @@ The present "extended" version of Overleaf CE includes:
 The following changes have been made to the contents of this repository with respect to the upstream:
 
 - Added GitHub actions workflows to automate publishing of docker images to GitHub Container Registry
+- Increased max compile timeout to possibly 20 minutes
+- Increased max upload size to 200m
 
 > [!CAUTION]
-> Overleaf Community Edition is intended for use in environments where **all** users are trusted. Community Edition is **not** appropriate for scenarios where isolation of users is required due to Sandbox Compiles not being available. When not using Sandboxed Compiles, users have full read and write access to the `sharelatex` container resources (filesystem, network, environment variables) when running LaTeX compiles. 
+> Overleaf Community Edition is intended for use in environments where **all** users are trusted. Community Edition is **not** appropriate for scenarios where isolation of users is required due to Sandbox Compiles not being available. When not using Sandboxed Compiles, users have full read and write access to the `sharelatex` container resources (filesystem, network, environment variables) when running LaTeX compiles.
 Therefore, in any environment where not all users can be fully trusted, it is strongly recommended to enable the Sandboxed Compiles feature available in the Extended Community Edition.
 
 For more information on Sandbox Compiles check out Overleaf [documentation](https://docs.overleaf.com/on-premises/configuration/overleaf-toolkit/server-pro-only-configuration/sandboxed-compiles).
@@ -82,7 +84,8 @@ folder are added.
 ## Authors
 
 [The Overleaf Team](https://www.overleaf.com/about)\
-[yu-i-i](https://github.com/yu-i-i/overleaf-cep) — CE extensions; references to adapted code are listed in [`CREDITS`](CREDITS.md)
+[yu-i-i](https://github.com/yu-i-i/overleaf-cep) — CE extensions; references to adapted code are listed in [`CREDITS`](CREDITS.md)\
+[rahulraman0108](https://github.com/rahulraman0108/overleaf-cep) - github actions to automate multi-platform image builds
 
 ## License
 
